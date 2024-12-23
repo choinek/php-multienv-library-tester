@@ -1,3 +1,14 @@
+# IDE
 .idea
+
+# Subdirectory for library and library configured files
 src-library
+.dockerignore
+
+# Configuration
 .php-library-test-docker.config
+
+# Files which will be generated from templates
+docker-compose.yml
+Dockerfile
+Makefile
