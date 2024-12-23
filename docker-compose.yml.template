@@ -6,7 +6,9 @@ services:
       dockerfile: Dockerfile
       target: base
       args:
-        PHP_VERSION: ${PHP_VERSION:-not-set}
+        PHP_VERSION: ${PHP_VERSION:-8.2}
     volumes:
       - {{PLACEHOLDER_DIR}}:/app
+    environment:
+      XDEBUG_MODE: coverage
     command: ["composer", "php-library-test-docker-cmd"]
