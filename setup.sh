@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -u
 
 CONFIG_FILE=".php-library-test-docker.config"
 PLACEHOLDER_DIR="{{PLACEHOLDER_DIR}}"
@@ -10,11 +10,11 @@ load_config() {
         echo "Loading existing configuration from $CONFIG_FILE..."
         # shellcheck source=.php-library-test-docker.config
         source "$CONFIG_FILE"
-        if [[ -z $mode || -z $php_versions ]]; then
+        if [[ -z $MODE || -z $PHP_VERSIONS ]]; then
             echo "Error: Configuration file is incomplete. Please review $CONFIG_FILE. Fastest way to fix is to remove this file."
             exit 1
         fi
-        echo "Configuration loaded: mode=$mode, php_versions=$php_versions, development=${development:-false}"
+        echo "Configuration loaded: MODE=$MODE, PHP_VERSIONS=$PHP_VERSIONS, SELF_DEVELOPMENT=${SELF_DEVELOPMENT:-false}, PHP_VERSION_ACTIVE_DEVELOPMENT=${PHP_VERSION_ACTIVE_DEVELOPMENT:-none}"
         return 0
     else
         echo "No existing configuration found."
@@ -26,11 +26,11 @@ configure_php_versions() {
     echo "Available PHP versions: $DEFAULT_PHP_VERSIONS"
     read -p "Enter PHP versions (comma-separated) or press Enter to use defaults: " user_versions
     if [[ -z $user_versions ]]; then
-        php_versions="$DEFAULT_PHP_VERSIONS"
+        PHP_VERSIONS="$DEFAULT_PHP_VERSIONS"
     else
-        php_versions="$user_versions"
+        PHP_VERSIONS="$user_versions"
     fi
-    echo "Using PHP versions: $php_versions"
+    echo "Using PHP versions: $PHP_VERSIONS"
 }
 
 configure_repository() {
@@ -73,25 +73,26 @@ configure_repository() {
 
 save_config() {
     echo "Saving configuration..."
-    echo "mode=$mode" > "$CONFIG_FILE"
-    echo "php_versions=$php_versions" >> "$CONFIG_FILE"
-    echo "development=${development:-false}" >> "$CONFIG_FILE"
+    echo "MODE=$MODE" > "$CONFIG_FILE"
+    echo "PHP_VERSIONS=$PHP_VERSIONS" >> "$CONFIG_FILE"
+    echo "PHP_VERSION_ACTIVE_DEVELOPMENT=${PHP_VERSION_ACTIVE_DEVELOPMENT:-}" >> "$CONFIG_FILE"
+    echo "SELF_DEVELOPMENT=${SELF_DEVELOPMENT:-false}" >> "$CONFIG_FILE"
     echo "Configuration saved to $CONFIG_FILE."
 }
 
 replace_placeholders() {
-    if [[ $development == "true" ]]; then
+    if [[ $SELF_DEVELOPMENT == "true" ]]; then
         echo "Development mode is enabled. Skipping placeholder replacement."
         return
     fi
 
     echo "Replacing $PLACEHOLDER_DIR in files..."
 
-    case $mode in
+    case $MODE in
         subdirectory) REPLACEMENT="src-library" ;;
         rootpath) REPLACEMENT="." ;;
         *)
-            echo "Error: Unsupported mode '$mode' in configuration."
+            echo "Error: Unsupported mode '$MODE' in configuration."
             exit 1
             ;;
     esac
@@ -134,7 +135,7 @@ reset_configuration() {
 
 main_menu() {
     while true; do
-        if [[ $development == "true" ]]; then
+        if [[ $SELF_DEVELOPMENT == "true" ]]; then
             echo "Warning - you are using development mode. It's not intended to test libraries, but to develop this script."
             echo "---"
             echo "undev) Disable Development Mode"
@@ -149,24 +150,24 @@ main_menu() {
 
         case $choice in
             1)
-                mode="subdirectory"
+                MODE="subdirectory"
                 break
                 ;;
             2)
-                mode="rootpath"
+                MODE="rootpath"
                 break
                 ;;
             3)
-                mode="composer"
+                MODE="composer"
                 break
                 ;;
             dev)
-                development="true"
+                SELF_DEVELOPMENT="true"
                 save_config
                 echo "Development mode enabled. Returning to the menu..."
                 ;;
             undev)
-                development="false"
+                SELF_DEVELOPMENT="false"
                 save_config
                 echo "Development mode disabled. Returning to the menu..."
                 ;;
@@ -176,7 +177,7 @@ main_menu() {
         esac
     done
 
-    echo "Selected mode: $mode"
+    echo "Selected mode: $MODE"
 }
 
 if load_config; then
@@ -202,6 +203,7 @@ if load_config; then
 else
     main_menu
     configure_php_versions
+    read -p "Set active development PHP version (e.g., 8.1): " PHP_VERSION_ACTIVE_DEVELOPMENT
     configure_repository
     save_config
     replace_placeholders
