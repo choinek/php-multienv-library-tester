@@ -4,9 +4,9 @@ PARALLEL ?= true
 SKIP_LOGS ?= false
 BUILD_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION-build.log)
 RUN_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION.log)
-SUCCEED_MESSAGE="Tests succeed for PHP $$CURRENTVERSION. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log for details.")"
+SUCCEED_MESSAGE="✔ PHP $$CURRENTVERSION - test succeed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log for details.")"
 PARALLEL_FINAL_MESSAGE="All parallel tests completed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR) for logs.")"
-FAILED_MESSAGE="Tests failed for PHP $$CURRENTVERSION. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log for details.")"
+FAILED_MESSAGE="✘ PHP $$CURRENTVERSION - tests failed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log and $(LOG_DIR)/test-$$CURRENTVERSION-build.log for details.")"
 
 .PHONY: prepare-logs
 prepare-logs:
@@ -50,7 +50,8 @@ ifeq ($(PARALLEL), true)
 		( \
 			echo "Running tests for PHP $$CURRENTVERSION..."; \
 			DOCKER_BUILDKIT=1 docker compose -f docker-compose.test.yml build service-library-test-$$CURRENTVERSION > $(BUILD_OUTPUT) 2>&1 && \
-			docker compose -f docker-compose.test.yml run --rm service-library-test-$$CURRENTVERSION > $(RUN_OUTPUT) 2>&1 || \
+			docker compose -f docker-compose.test.yml run --rm service-library-test-$$CURRENTVERSION > $(RUN_OUTPUT) 2>&1 && \
+			echo $(SUCCEED_MESSAGE) || \
 			echo $(FAILED_MESSAGE) \
 		) & echo $$! > $(LOG_DIR)/test-$$CURRENTVERSION.pid; \
 	done; \
