@@ -2,10 +2,18 @@
 
 REPO_URL="https://github.com/choinek/php-library-test-docker"
 
-read -p "Enter the name of the directory to clone the repository into: " TARGET_DIR
+ask_for_directory() {
+    read -p "Enter the name of the directory to clone the repository into: " TARGET_DIR
+    if [[ -z $TARGET_DIR ]]; then
+        echo "Error: Directory name cannot be empty."
+        exit 1
+    fi
+}
 
-if [[ -z $TARGET_DIR ]]; then
-    echo "Error: Directory name cannot be empty."
+if [[ -t 0 ]]; then
+    ask_for_directory
+else
+    echo "Script is running in a piped context. Use an argument or interactive shell."
     exit 1
 fi
 
