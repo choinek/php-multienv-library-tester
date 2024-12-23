@@ -1,9 +1,27 @@
 CONFIG_FILE=.php-library-test-docker.config
+
 ifeq ($(wildcard $(CONFIG_FILE)),)
-  ifneq ($(MAKECMDGOALS),setup)
-    $(error Configuration file $(CONFIG_FILE) not found. Run 'make setup' to create it.)
+  ifneq ($(MAKECMDGOALS),setup help)
+    $(info Configuration file $(CONFIG_FILE) not found.)
+    $(info Run 'make setup' or 'bash setup.sh' first.)
   endif
 endif
+
+
+help:
+	@echo "Usage:"
+	@echo "   Working with the project:"
+	@echo "      make test-all              - Run all tests"
+	@echo "      make test-version          - Run tests for a specific PHP version"
+	@echo "      make test-dev              - Run tests in development environment"
+	@echo "      make coverage              - Generate coverage report"
+	@echo "   Setup:"
+	@echo "      make setup                 - Set up the project configuration"
+	@echo "      make dev-set-php-version   - Set up development environment php version"
+	@echo "      make validate              - Validate the environment"
+
+setup:
+	bash ./setup.sh
 
 LIBRARY_DIR=$(shell awk -F= '/^library_dir=/{print $$2}' $(CONFIG_FILE))
 
@@ -24,14 +42,6 @@ prepare-logs:
 
 .PHONY: all
 all: prepare-logs
-
-help:
-	@echo "Usage:"
-	@echo "   make test-all"
-	@echo "   make test-version"
-	@echo "   make setup-dev"
-	@echo "   make test-dev"
-	@echo "   make validate"
 
 prepare-framework:
 	@mkdir -p $(LOG_DIR)
@@ -103,9 +113,9 @@ test-version: prepare-framework
 	{ echo "$(SUCCEED_MESSAGE)"; } || { echo "$(FAILED_MESSAGE)"; } && \
 	docker compose -f docker-compose.test.yml down --remove-orphans
 
-setup-dev: prepare-framework
+dev-set-php-version: prepare-framework
 	@if [ "$(PHP_VERSION)" = "not-set" ]; then \
-		echo "Please set PHP_VERSION in the envrionment, e.g., PHP_VERSION=8.1 make setup-dev"; \
+		echo "Please set PHP_VERSION in the envrionment, e.g., PHP_VERSION=8.1 make dev-set-php-version"; \
 		exit 1; \
 	fi
 	docker compose build library-development > $(LOG_DIR)/dev-build.log 2>&1
