@@ -5,16 +5,16 @@ PLACEHOLDER_DIR="{{PLACEHOLDER_DIR}}"
 DEFAULT_PHP_VERSIONS="8.1,8.2,8.3,8.4"
 FILES_WITH_PLACEHOLDERS=("Dockerfile" "docker-compose.yml" "docker-compose.test.yml" "Makefile")
 
-# Function to load existing configuration
 load_config() {
     if [[ -f $CONFIG_FILE ]]; then
         echo "Loading existing configuration from $CONFIG_FILE..."
+        # shellcheck source=.php-library-test-docker.config
         source "$CONFIG_FILE"
         if [[ -z $mode || -z $php_versions ]]; then
-            echo "Error: Configuration file is incomplete. Please check $CONFIG_FILE."
+            echo "Error: Configuration file is incomplete. Please review $CONFIG_FILE. Fastest way to fix is to remove this file."
             exit 1
         fi
-        echo "Configuration loaded: mode=$mode, php_versions=$php_versions"
+        echo "Configuration loaded: mode=$mode, php_versions=$php_versions, development=${development:-false}"
         return 0
     else
         echo "No existing configuration found."
@@ -22,7 +22,6 @@ load_config() {
     fi
 }
 
-# Function to prompt for PHP versions
 configure_php_versions() {
     echo "Available PHP versions: $DEFAULT_PHP_VERSIONS"
     read -p "Enter PHP versions (comma-separated) or press Enter to use defaults: " user_versions
@@ -35,14 +34,25 @@ configure_php_versions() {
 }
 
 configure_repository() {
-    read -p "Would you like to clone a repository? (yes/no): " clone_repo
+    read -p "Would you like to clone a library repository? (yes/no): " clone_repo
     if [[ $clone_repo == "yes" ]]; then
-        read -p "Enter the repository URL: " repo_url
-        mkdir -p src-library
-        git clone "$repo_url" src-library
-        echo "Repository cloned into src-library."
+        while true; do
+            read -p "Enter the repository public URL: " repo_url
+            read -p "Check if it's correct - I will run: git clone \"$repo_url\" src-library (yes/no): " confirm
+            if [[ $confirm == "yes" ]]; then
+                mkdir -p src-library
+                git clone "$repo_url" src-library
+                if [[ $? -eq 0 ]]; then
+                    echo "Repository cloned into src-library."
+                    break
+                else
+                    echo "Failed to clone repository. Please check the URL and try again."
+                fi
+            else
+                echo "Please enter the repository URL again."
+            fi
+        done
 
-        # Copy .gitignore to .dockerignore
         if [[ -f src-library/.gitignore ]]; then
             cp src-library/.gitignore .dockerignore
             echo "Copied .gitignore from library to .dockerignore."
@@ -50,7 +60,6 @@ configure_repository() {
             echo "Warning: .gitignore not found in the repository."
         fi
 
-        # Check for composer.lock in .dockerignore
         if ! grep -q "composer.lock" .dockerignore; then
             echo "composer.lock" >> .dockerignore
             echo "Added 'composer.lock' to .dockerignore."
@@ -62,7 +71,6 @@ configure_repository() {
 }
 
 
-# Function to save the configuration
 save_config() {
     echo "Saving configuration..."
     echo "mode=$mode" > "$CONFIG_FILE"
@@ -70,8 +78,12 @@ save_config() {
     echo "Configuration saved to $CONFIG_FILE."
 }
 
-# Function to replace placeholders
 replace_placeholders() {
+    if [[ $development == "true" ]]; then
+        echo "Development mode is enabled. Skipping placeholder replacement."
+        return
+    fi
+
     echo "Replacing $PLACEHOLDER_DIR in files..."
 
     case $mode in
@@ -87,13 +99,10 @@ replace_placeholders() {
         template_file="$file.template"
         output_file="$file"
 
-        # Check if .template file exists
         if [[ -f $template_file ]]; then
-            # Copy .template to non-template (override if exists)
             cp "$template_file" "$output_file"
             echo "Copied $template_file to $output_file"
 
-            # Replace placeholders in the copied file
             sed -i '' "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file" 2>/dev/null || \
             sed -i "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file"
             echo "Replaced placeholders in $output_file"
@@ -105,10 +114,8 @@ replace_placeholders() {
     echo "Placeholder replacement completed. Using directory: $REPLACEMENT."
 }
 
-# Function to reset configuration
 reset_configuration() {
     echo "Resetting configuration..."
-    # Remove non-template files
     for file in "${FILES_WITH_PLACEHOLDERS[@]}"; do
         if [[ -f $file ]]; then
             rm -f "$file"
@@ -116,7 +123,6 @@ reset_configuration() {
         fi
     done
 
-    # Remove configuration file
     if [[ -f $CONFIG_FILE ]]; then
         rm -f "$CONFIG_FILE"
         echo "Removed configuration file: $CONFIG_FILE"
@@ -125,7 +131,6 @@ reset_configuration() {
     echo "Configuration reset complete. You can now run the setup again."
 }
 
-# Main script logic for configured setup
 if load_config; then
     echo "Setup already configured."
     echo "1) Change PHP versions"
@@ -147,16 +152,20 @@ if load_config; then
             ;;
     esac
 else
-    echo "Setup Script Options:"
-    echo "1) Configure (subdirectory mode)"
-    echo "2) Configure (rootpath mode)"
-    read -p "Enter your choice (1/2): " choice
+    echo "Setup Working Mode:"
+    echo "1) Standalone Mode (library in subdirectory for independent testing)"
+    echo "2) Integrated Mode (library in root path for pipeline testing)"
+    echo "3) Composer Mode (simulate installation via Composer)"
+    read -p "Enter your choice (1/2/3): " choice
 
     case $choice in
         1) mode="subdirectory" ;;
         2) mode="rootpath" ;;
+        3) mode="composer" ;;
         *) echo "Invalid choice. Exiting."; exit 1 ;;
     esac
+
+    echo "Selected mode: $mode"
 
     configure_php_versions
     configure_repository

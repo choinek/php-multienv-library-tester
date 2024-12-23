@@ -14,11 +14,7 @@ This repository provides two modes:
 - test with volume mapping - one version, you have to rebuild before switching to another version; its optimization for development
 
 Currently im thinking about:
-- how to integrate it with library in automated way (like script for cicd which will download and setup this for tests); there will be script for auto-setup almost everything
-- automatic get php versions based on your composer.json info
-- maybe handle multiple commands and put them in different files
 - override base command for tests (so you don't have to add it to composer.json)
-- maybe move it to subdirectory to not mix, or to level up to not mix with library - ill check whats better
 - optimizations - do not relay on docker cache adn think about vendor cache (which could be force cleared if needed)
 
 ---
