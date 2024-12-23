@@ -1,7 +1,6 @@
 ARG PHP_VERSION=8.2
 FROM php:${PHP_VERSION}-cli AS base
 
-# im not sure what libraries should be defined maybe get from composer ?
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
