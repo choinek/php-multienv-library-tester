@@ -13,7 +13,7 @@ WORKDIR /app
 
 FROM base AS with-files
 
-COPY . /app/
+COPY {{PLACEHOLDER_DIR}} /app/
 
 RUN if [ ! -f "composer.json" ]; then \
         echo "Error: composer.json not found in /app"; \

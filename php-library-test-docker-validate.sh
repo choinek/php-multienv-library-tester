@@ -37,8 +37,8 @@ validate_composer_commands() {
         exit 1
     fi
 
-    if [[ ! -f composer.json ]]; then
-        echo "Error: composer.json not found in the current directory."
+    if [[ ! -f {{PLACEHOLDER_DIR}}/composer.json ]]; then
+        echo "Error: composer.json not found in {{PLACEHOLDER_DIR}}. Please ensure the file exists."
         exit 1
     fi
 
@@ -51,23 +51,23 @@ validate_composer_commands() {
     fi
 
     echo "Commands from docker-compose.yml: $COMPOSE_COMMANDS"
-    echo "Validating against composer.json scripts..."
+    echo "Validating against {{PLACEHOLDER_DIR}}/composer.json scripts..."
 
     for COMMAND in $COMPOSE_COMMANDS; do
         if [[ "$USE_JQ" == true ]]; then
-            if ! jq -e --arg cmd "$COMMAND" '.scripts[$cmd] != null' composer.json &>/dev/null; then
-                echo "Command $COMMAND is missing in composer.json scripts."
+            if ! jq -e --arg cmd "$COMMAND" '.scripts[$cmd] != null' {{PLACEHOLDER_DIR}}/composer.json &>/dev/null; then
+                echo "Command $COMMAND is missing in {{PLACEHOLDER_DIR}}/composer.json scripts."
                 exit 1
             fi
         else
-            if ! grep -q "\"$COMMAND\"" composer.json; then
-                echo "Command $COMMAND might be missing in composer.json scripts (not 100% sure, jq is not installed)."
+            if ! grep -q "\"$COMMAND\"" {{PLACEHOLDER_DIR}}/composer.json; then
+                echo "Command $COMMAND might be missing in {{PLACEHOLDER_DIR}}/composer.json scripts (not 100% sure, jq is not installed)."
                 exit 1
             fi
         fi
     done
 
-    echo "Validation successful. All commands are present in composer.json scripts."
+    echo "Validation successful. All commands are present in {{PLACEHOLDER_DIR}}/composer.json scripts."
 }
 
 validate_docker
