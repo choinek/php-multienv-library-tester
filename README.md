@@ -48,7 +48,7 @@ Currently im thinking about:
     - Go to the [repository page](https://github.com/choinek/php-library-test-docker).
     - Click on "Code" > "Download ZIP".
 
-2. Unpack ZIP and remove README.md to not overwrite your current one :P - it will be fixed in future
+2. Unpack ZIP and remove README.md and .gitignore to not overwrite your current one :P - it will be fixed in future
 
 3. Move content to your library's root directory (with your `composer.json` file).
 
