@@ -138,6 +138,7 @@ replace_placeholders() {
     echo "Placeholder replacement completed. Using directory: $REPLACEMENT."
 }
 
+
 generate_docker_compose() {
     local template_file="docker-compose.test.yml.template"
     local output_file="docker-compose.test.yml"
@@ -147,22 +148,35 @@ generate_docker_compose() {
     if [[ -f $template_file ]]; then
         template=$(<"$template_file")
 
-        iterator_block="${template#*{{ITERATOR_START}}}"
-        iterator_block="${iterator_block%{{ITERATOR_END}}*}"
+        iterator_block="${template#*<<<ITERATOR_START>>>}"
+        iterator_block="${iterator_block%<<<ITERATOR_END>>>*}"
+        iterator_block=$(echo "$iterator_block" | sed '1d;$d')
 
-        if [[ ${#PHP_VERSIONS[@]} -eq 0 ]]; then
+        IFS=',' read -ra php_versions_array <<< "$PHP_VERSIONS"
+
+        if [[ ${#php_versions_array[@]} -eq 0 ]]; then
             echo "Error: PHP_VERSIONS array is empty or not set."
             exit 1
         fi
 
         local services=""
-        for version in "${PHP_VERSIONS[@]}"; do
-            service="${iterator_block//{{PHP_VERSION}}/$version}"
+        for version in "${php_versions_array[@]}"; do
+            version=$(echo "$version" | xargs)
+            if [[ -z $version ]]; then
+                continue
+            fi
+            service="${iterator_block//<<<PHP_VERSION>>>/$version}"
             services+="$service\n"
         done
 
-        final_content="${template//{{ITERATOR_START}}*/$services}"
-        final_content="${final_content//{{ITERATOR_END}}/}"
+        final_content=$(echo -e "$template" | awk '
+            BEGIN { in_block = 0 }
+            /<<<ITERATOR_START>>>/ { in_block = 1; print "<<<ITERATOR_PLACEHOLDER>>>"; next }
+            /<<<ITERATOR_END>>>/ { in_block = 0; next }
+            !in_block { print }
+        ')
+
+        final_content="${final_content//<<<ITERATOR_PLACEHOLDER>>>/${services}}"
 
         echo -e "$final_content" > "$output_file"
         echo "Generated $output_file with services for PHP versions: ${PHP_VERSIONS[*]}"
@@ -171,8 +185,6 @@ generate_docker_compose() {
         exit 1
     fi
 }
-
-
 
 
 reset_configuration() {
@@ -200,13 +212,11 @@ configure_active_php_version() {
         read -p "Enter PHP version or press Enter to use default: " user_version
         user_version=${user_version:-$default_version}
 
-        # Validate the version format
         if ! [[ $user_version =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
             echo "❌ Error: Invalid PHP version format: $user_version (must follow SemVer, e.g., 8.1 or 8.1.2). Please try again."
             continue
         fi
 
-        # Check if the Docker image tag exists and suppress errors
         if curl -sSf "https://registry.hub.docker.com/v2/repositories/library/php/tags/$user_version" 2>/dev/null > /dev/null; then
             echo "✔ php:${user_version}-cli available"
             PHP_VERSION_ACTIVE_DEVELOPMENT="$user_version"
@@ -295,7 +305,7 @@ update_main_menu() {
         1)
             configure_php_versions
             save_config
-            replace_placeholders
+            generate_docker_compose
             echo "PHP versions updated."
             ;;
         2)
@@ -306,6 +316,7 @@ update_main_menu() {
             ;;
         3)
             replace_placeholders
+            generate_docker_compose
             echo "Templates and placeholders updated."
             ;;
         reset)
