@@ -3,7 +3,7 @@
 CONFIG_FILE=".php-library-test-docker.config"
 PLACEHOLDER_DIR="{{PLACEHOLDER_DIR}}"
 DEFAULT_PHP_VERSIONS="8.1,8.2,8.3,8.4"
-FILES_WITH_PLACEHOLDERS=("Dockerfile" "docker-compose.yml" "docker-compose.test.yml" "Makefile")
+FILES_WITH_PLACEHOLDERS=("Dockerfile" "docker-compose.yml" "docker-compose.test.yml" "validate.sh")
 
 load_config() {
     if [[ -f $CONFIG_FILE ]]; then
@@ -75,6 +75,7 @@ save_config() {
     echo "Saving configuration..."
     echo "mode=$mode" > "$CONFIG_FILE"
     echo "php_versions=$php_versions" >> "$CONFIG_FILE"
+    echo "development=${development:-false}" >> "$CONFIG_FILE"
     echo "Configuration saved to $CONFIG_FILE."
 }
 
@@ -131,6 +132,53 @@ reset_configuration() {
     echo "Configuration reset complete. You can now run the setup again."
 }
 
+main_menu() {
+    while true; do
+        if [[ $development == "true" ]]; then
+            echo "Warning - you are using development mode. It's not intended to test libraries, but to develop this script."
+            echo "---"
+            echo "undev) Disable Development Mode"
+        fi
+
+        echo "Setup Working Mode:"
+        echo "1) Standalone Mode (library in subdirectory for independent testing)"
+        echo "2) Integrated Mode (library in root path for pipeline testing)"
+        echo "3) Composer Mode (simulate installation via Composer)"
+        echo "---"
+        read -p "Enter your choice (1/2/3/dev/undev): " choice
+
+        case $choice in
+            1)
+                mode="subdirectory"
+                break
+                ;;
+            2)
+                mode="rootpath"
+                break
+                ;;
+            3)
+                mode="composer"
+                break
+                ;;
+            dev)
+                development="true"
+                save_config
+                echo "Development mode enabled. Returning to the menu..."
+                ;;
+            undev)
+                development="false"
+                save_config
+                echo "Development mode disabled. Returning to the menu..."
+                ;;
+            *)
+                echo "Invalid choice. Please try again."
+                ;;
+        esac
+    done
+
+    echo "Selected mode: $mode"
+}
+
 if load_config; then
     echo "Setup already configured."
     echo "1) Change PHP versions"
@@ -152,21 +200,7 @@ if load_config; then
             ;;
     esac
 else
-    echo "Setup Working Mode:"
-    echo "1) Standalone Mode (library in subdirectory for independent testing)"
-    echo "2) Integrated Mode (library in root path for pipeline testing)"
-    echo "3) Composer Mode (simulate installation via Composer)"
-    read -p "Enter your choice (1/2/3): " choice
-
-    case $choice in
-        1) mode="subdirectory" ;;
-        2) mode="rootpath" ;;
-        3) mode="composer" ;;
-        *) echo "Invalid choice. Exiting."; exit 1 ;;
-    esac
-
-    echo "Selected mode: $mode"
-
+    main_menu
     configure_php_versions
     configure_repository
     save_config

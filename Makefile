@@ -1,3 +1,12 @@
+CONFIG_FILE=.php-library-test-docker.config
+ifeq ($(wildcard $(CONFIG_FILE)),)
+  ifneq ($(MAKECMDGOALS),setup)
+    $(error Configuration file $(CONFIG_FILE) not found. Run 'make setup' to create it.)
+  endif
+endif
+
+LIBRARY_DIR=$(shell awk -F= '/^library_dir=/{print $$2}' $(CONFIG_FILE))
+
 PHP_VERSION ?= not-set
 LOG_DIR=php-library-test-docker-output
 PARALLEL ?= true
@@ -33,8 +42,8 @@ prepare-framework:
 			exit 1; \
 		fi; \
 	else \
-		echo ".dockerignore does not exist. Copying {{PLACEHOLDER_DIR/.gitignore to ./.dockerignore..."; \
-		cp {{PLACEHOLDER_DIR}}/.gitignore .dockerignore; \
+		echo ".dockerignore does not exist. Copying $LIBRARY_DIR/.gitignore to ./.dockerignore..."; \
+		cp $LIBRARY_DIR/.gitignore .dockerignore; \
 	fi
 
 get-versions:
