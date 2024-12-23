@@ -4,81 +4,81 @@ CONFIG_FILE=".php-library-test-docker.config"
 PLACEHOLDER_DIR="{{PLACEHOLDER_DIR}}"
 DEFAULT_PHP_VERSIONS="8.1,8.2,8.3,8.4"
 
-function update_config() {
-    local mode="$1"
-    local php_versions="$2"
+# Function to load existing configuration
+load_config() {
+    if [[ -f $CONFIG_FILE ]]; then
+        echo "Loading existing configuration from $CONFIG_FILE..."
+        source "$CONFIG_FILE"
+        if [[ -z $mode || -z $php_versions ]]; then
+            echo "Error: Configuration file is incomplete. Please check $CONFIG_FILE."
+            exit 1
+        fi
+        echo "Configuration loaded: mode=$mode, php_versions=$php_versions"
+        return 0
+    else
+        echo "No existing configuration found. Running full setup."
+        return 1
+    fi
+}
 
+# Function to prompt for PHP versions
+configure_php_versions() {
+    echo "Available PHP versions: $DEFAULT_PHP_VERSIONS"
+    read -p "Enter PHP versions (comma-separated) or press Enter to use defaults($DEFAULT_PHP_VERSIONS): " user_versions
+    if [[ -z $user_versions ]]; then
+        php_versions="$DEFAULT_PHP_VERSIONS"
+    else
+        php_versions="$user_versions"
+    fi
+    echo "Using PHP versions: $php_versions"
+}
+
+# Function to save the configuration
+save_config() {
     echo "Saving configuration..."
     echo "mode=$mode" > "$CONFIG_FILE"
     echo "php_versions=$php_versions" >> "$CONFIG_FILE"
-    echo "Configuration saved to $CONFIG_FILE"
+    echo "Configuration saved to $CONFIG_FILE."
 }
 
-function inject_files() {
-    echo "Injecting files into the current directory..."
-    update_config "rootpath" "$DEFAULT_PHP_VERSIONS"
-    replace_placeholders "."
-}
+# Function to replace placeholders
+replace_placeholders() {
+    echo "Replacing $PLACEHOLDER_DIR in files..."
 
-function create_src_library() {
-    echo "Creating 'src-library' directory..."
-    mkdir -p src-library
-    cd src-library || exit
-    read -p "Would you like to clone a repository here? (yes/no): " clone_repo
-    if [[ $clone_repo == "yes" ]]; then
-        read -p "Enter the repository URL: " repo_url
-        git clone "$repo_url" .
-    fi
-    cd ..
-    update_config "subdirectory" "$DEFAULT_PHP_VERSIONS"
-    replace_placeholders "src-library"
-}
-
-function replace_placeholders() {
-    local replacement="$1"
-    echo "Replacing placeholders with: $replacement"
+    case $mode in
+        subdirectory) REPLACEMENT="src-library" ;;
+        rootpath) REPLACEMENT="." ;;
+        *)
+            echo "Error: Unsupported mode '$mode' in configuration."
+            exit 1
+            ;;
+    esac
 
     for file in Dockerfile docker-compose.yml docker-compose.test.yml Makefile; do
         if [[ -f $file ]]; then
-            sed -i '' "s|$PLACEHOLDER_DIR|$replacement|g" "$file" 2>/dev/null || \
-            sed -i "s|$PLACEHOLDER_DIR|$replacement|g" "$file"
+            sed -i '' "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$file" 2>/dev/null || \
+            sed -i "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$file"
             echo "Updated $file"
         else
             echo "File $file not found. Skipping."
         fi
     done
+
+    echo "Placeholder replacement completed. Using directory: $REPLACEMENT."
 }
 
-function configure_php_versions() {
-    echo "Available PHP versions: $DEFAULT_PHP_VERSIONS"
-    read -p "Enter PHP versions (comma-separated) or press Enter to use defaults: " user_versions
-    if [[ -z $user_versions ]]; then
-        echo "$DEFAULT_PHP_VERSIONS"
-    else
-        echo "$user_versions"
-    fi
-}
-
-echo "Welcome to the php library multiple versions test setup script!"
-echo "Would you like to:"
-echo "1) Inject files here (root path mode)"
-echo "2) Create 'src-library' directory (subdirectory mode)"
-
-read -p "Enter your choice (1/2): " choice
-
-php_versions=$(configure_php_versions)
-
-case $choice in
-1)
-    inject_files
-    ;;
-2)
-    create_src_library
-    ;;
-*)
-    echo "Invalid choice. Exiting."
-    exit 1
-    ;;
-esac
+# Main script logic
+if load_config; then
+    echo "Existing setup detected."
+    configure_php_versions
+    save_config
+    replace_placeholders
+else
+    echo "Starting new setup..."
+    read -p "Enter setup mode (subdirectory/rootpath): " mode
+    configure_php_versions
+    save_config
+    replace_placeholders
+fi
 
 echo "Setup complete."

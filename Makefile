@@ -33,8 +33,8 @@ prepare-framework:
 			exit 1; \
 		fi; \
 	else \
-		echo ".dockerignore does not exist. Copying .gitignore to .dockerignore..."; \
-		cp .gitignore .dockerignore; \
+		echo ".dockerignore does not exist. Copying {{PLACEHOLDER_DIR/.gitignore to ./.dockerignore..."; \
+		cp {{PLACEHOLDER_DIR}}/.gitignore .dockerignore; \
 	fi
 
 get-versions:
