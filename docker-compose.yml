@@ -1,5 +1,6 @@
 services:
   library-development:
+    network_mode: "host"
     build:
       context: .
       dockerfile: Dockerfile

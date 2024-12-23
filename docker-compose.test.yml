@@ -1,5 +1,6 @@
 services:
   service-library-test-8.1:
+    network_mode: "host"
     build:
       context: .
       dockerfile: Dockerfile
@@ -9,6 +10,7 @@ services:
     command: ["composer", "php-library-test-docker-cmd"]
 
   service-library-test-8.2:
+    network_mode: "host"
     build:
       context: .
       dockerfile: Dockerfile
@@ -18,6 +20,7 @@ services:
     command: ["composer", "php-library-test-docker-cmd"]
 
   service-library-test-8.3:
+    network_mode: "host"
     build:
       context: .
       dockerfile: Dockerfile
@@ -27,6 +30,7 @@ services:
     command: ["composer", "php-library-test-docker-cmd"]
 
   service-library-test-8.4:
+    network_mode: "host"
     build:
       context: .
       dockerfile: Dockerfile
