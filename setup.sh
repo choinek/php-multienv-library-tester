@@ -3,6 +3,7 @@
 CONFIG_FILE=".php-library-test-docker.config"
 PLACEHOLDER_DIR="{{PLACEHOLDER_DIR}}"
 DEFAULT_PHP_VERSIONS="8.1,8.2,8.3,8.4"
+FILES_WITH_PLACEHOLDERS=("Dockerfile" "docker-compose.yml" "docker-compose.test.yml" "Makefile")
 
 # Function to load existing configuration
 load_config() {
@@ -24,7 +25,7 @@ load_config() {
 # Function to prompt for PHP versions
 configure_php_versions() {
     echo "Available PHP versions: $DEFAULT_PHP_VERSIONS"
-    read -p "Enter PHP versions (comma-separated) or press Enter to use defaults($DEFAULT_PHP_VERSIONS): " user_versions
+    read -p "Enter PHP versions (comma-separated) or press Enter to use defaults: " user_versions
     if [[ -z $user_versions ]]; then
         php_versions="$DEFAULT_PHP_VERSIONS"
     else
@@ -54,13 +55,22 @@ replace_placeholders() {
             ;;
     esac
 
-    for file in Dockerfile docker-compose.yml docker-compose.test.yml Makefile; do
-        if [[ -f $file ]]; then
-            sed -i '' "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$file" 2>/dev/null || \
-            sed -i "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$file"
-            echo "Updated $file"
+    for file in "${FILES_WITH_PLACEHOLDERS[@]}"; do
+        template_file="$file.template"
+        output_file="$file"
+
+        # Check if .template file exists
+        if [[ -f $template_file ]]; then
+            # Copy .template to non-template (override if exists)
+            cp "$template_file" "$output_file"
+            echo "Copied $template_file to $output_file"
+
+            # Replace placeholders in the copied file
+            sed -i '' "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file" 2>/dev/null || \
+            sed -i "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file"
+            echo "Replaced placeholders in $output_file"
         else
-            echo "File $file not found. Skipping."
+            echo "Template file $template_file not found. Skipping."
         fi
     done
 
