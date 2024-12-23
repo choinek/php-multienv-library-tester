@@ -1,11 +1,12 @@
 ARG PHP_VERSION=8.2
 FROM php:${PHP_VERSION}-cli AS base
 
+# im not sure what libraries should be defined maybe get from composer ?
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
-    && docker-php-ext-install zip
+    && docker-php-ext-install zip pcntl
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

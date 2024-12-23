@@ -122,8 +122,8 @@ Its optimized for fast tests (it uses volume mapping)
 Run tests across all defined PHP versions.
 
 - **Optional Parameters**:
-    - `PARALLEL=true`: Run tests in parallel.
-        - Example: `PARALLEL=true make test-all`
+    - `PARALLEL=false`: Disable parallel.
+        - Example: `PARALLEL=false make test-all`
     - `SKIP_LOGS=true`: Suppress log file generation.
         - Example: `SKIP_LOGS=true make test-all`
 
@@ -160,7 +160,12 @@ Run tests for a specific PHP version.
 
 3. Run tests across all PHP versions using parallel - multiple PHP at once:
    ```bash
-   > PARALLEL=true make test-all
+   > make test-all
+   ```
+
+4. If you have problem with parallel, you can disable it:
+   ```bash
+   > PARALLEL=false make test-all
    ```
 
 4. Something small to fix, so you fix it and want to test it without rebuilding local env:
@@ -169,14 +174,12 @@ Run tests for a specific PHP version.
     Enter PHP version (e.g., 8.1): 8.2
    ```
 
-
-4. 
-7. Run tests in parallel while suppressing logs:
+5. Run tests in parallel while suppressing logs:
    ```bash
-   PARALLEL=true SKIP_LOGS=true make test-all
+   SKIP_LOGS=true make test-all
    ```
 
-4. Run tests for PHP 8.2:
+6Run tests for PHP 8.2:
    ```bash
    make test-version
    ```

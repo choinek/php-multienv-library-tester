@@ -1,6 +1,6 @@
 PHP_VERSION ?= not-set
 LOG_DIR=php-library-test-docker-output
-PARALLEL ?= false
+PARALLEL ?= true
 SKIP_LOGS ?= false
 BUILD_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION-build.log)
 RUN_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION.log)
@@ -71,7 +71,7 @@ else
 		docker compose -f docker-compose.test.yml build service-library-test-$$CURRENTVERSION && \
 		(docker compose -f docker-compose.test.yml run --rm service-library-test-$$CURRENTVERSION && \
 		echo "$$(printf '%s' $(SUCCEED_MESSAGE))" || \
-		echo "$$(printf '%s' $(FAILED_MESSAGE))"); \
+		echo "$(FAILED_MESSAGE)"); \
 	done; \
 	docker compose -f docker-compose.test.yml down --remove-orphans
 endif
