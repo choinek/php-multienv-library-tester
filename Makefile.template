@@ -42,7 +42,7 @@ get-versions:
 
 
 validate:
-	@bash ./php-library-test-docker-validate.sh
+	@bash ./validate.sh
 
 test-all: prepare-framework get-versions
 ifeq ($(PARALLEL), true)
@@ -102,6 +102,11 @@ setup-dev: prepare-framework
 	docker compose build library-development > $(LOG_DIR)/dev-build.log 2>&1
 
 
+.PHONY: coverage
+coverage: prepare-framework
+	@mkdir -p $(LOG_DIR)/coverage
+	docker compose run --rm library-development composer php-library-test-docker-cmd -- --coverage-html=$(LOG_DIR)/coverage
+	@echo "Coverage report generated at $(LOG_DIR)/coverage"
 
 test-dev: prepare-framework
 	docker compose run --rm library-development > $(LOG_DIR)/dev-tests.log 2>&1
