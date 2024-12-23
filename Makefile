@@ -45,13 +45,14 @@ ifeq ($(PARALLEL), true)
 			echo $(FAILED_MESSAGE) \
 		) & echo $$! > $(LOG_DIR)/test-$$CURRENTVERSION.pid; \
 	done; \
+	while true; do \
 		sleep 2; \
 		remaining=0; \
 		for pid_file in $(LOG_DIR)/*.pid; do \
 			if [ -f $$pid_file ]; then \
 				pid=$$(cat $$pid_file); \
 				process_info=$$(ps -p $$pid -o command= 2>/dev/null); \
-				if [ -z "$$process_info" ] || [[ "$$process_info" != *docker* ]] || [[ "$$process_info" != *test* ]] || [[ "$$process_info" != *php* ]]; then \
+				if [ -z "$$process_info" ]; then \
 					rm -f $$pid_file; \
 				else \
 					remaining=$$((remaining + 1)); \
@@ -61,6 +62,7 @@ ifeq ($(PARALLEL), true)
 		if [ $$remaining -eq 0 ]; then \
 			break; \
 		fi; \
+	done; \
 	docker compose -f docker-compose.test.yml down --remove-orphans
 	@echo $(PARALLEL_FINAL_MESSAGE)
 else
@@ -73,6 +75,7 @@ else
 	done; \
 	docker compose -f docker-compose.test.yml down --remove-orphans
 endif
+
 
 test-version: prepare-output
 	@read -p "Enter PHP version (e.g., 8.1): " CURRENTVERSION && \

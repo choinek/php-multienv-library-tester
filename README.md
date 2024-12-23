@@ -21,6 +21,7 @@ Currently im thinking about:
 - maybe handle multiple commands and put them in different files
 - override base command for tests (so you don't have to add it to composer.json)
 - maybe move it to subdirectory to not mix, or to level up to not mix with library - ill check whats better
+- optimizations - do not relay on docker cache adn think about vendor cache (which could be force cleared if needed)
 
 ---
 
