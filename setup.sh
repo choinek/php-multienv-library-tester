@@ -17,7 +17,7 @@ load_config() {
         echo "Configuration loaded: mode=$mode, php_versions=$php_versions"
         return 0
     else
-        echo "No existing configuration found. Running full setup."
+        echo "No existing configuration found."
         return 1
     fi
 }
@@ -33,6 +33,34 @@ configure_php_versions() {
     fi
     echo "Using PHP versions: $php_versions"
 }
+
+configure_repository() {
+    read -p "Would you like to clone a repository? (yes/no): " clone_repo
+    if [[ $clone_repo == "yes" ]]; then
+        read -p "Enter the repository URL: " repo_url
+        mkdir -p src-library
+        git clone "$repo_url" src-library
+        echo "Repository cloned into src-library."
+
+        # Copy .gitignore to .dockerignore
+        if [[ -f src-library/.gitignore ]]; then
+            cp src-library/.gitignore .dockerignore
+            echo "Copied .gitignore from library to .dockerignore."
+        else
+            echo "Warning: .gitignore not found in the repository."
+        fi
+
+        # Check for composer.lock in .dockerignore
+        if ! grep -q "composer.lock" .dockerignore; then
+            echo "composer.lock" >> .dockerignore
+            echo "Added 'composer.lock' to .dockerignore."
+            echo "Please ensure 'composer.lock' is added to .gitignore in your library repository."
+        fi
+    else
+        echo "Skipping repository setup."
+    fi
+}
+
 
 # Function to save the configuration
 save_config() {
@@ -77,18 +105,63 @@ replace_placeholders() {
     echo "Placeholder replacement completed. Using directory: $REPLACEMENT."
 }
 
-# Main script logic
+# Function to reset configuration
+reset_configuration() {
+    echo "Resetting configuration..."
+    # Remove non-template files
+    for file in "${FILES_WITH_PLACEHOLDERS[@]}"; do
+        if [[ -f $file ]]; then
+            rm -f "$file"
+            echo "Removed $file"
+        fi
+    done
+
+    # Remove configuration file
+    if [[ -f $CONFIG_FILE ]]; then
+        rm -f "$CONFIG_FILE"
+        echo "Removed configuration file: $CONFIG_FILE"
+    fi
+
+    echo "Configuration reset complete. You can now run the setup again."
+}
+
+# Main script logic for configured setup
 if load_config; then
-    echo "Existing setup detected."
-    configure_php_versions
-    save_config
-    replace_placeholders
+    echo "Setup already configured."
+    echo "1) Change PHP versions"
+    echo "2) Reset configuration"
+    read -p "Enter your choice (1/2): " choice
+
+    case $choice in
+        1)
+            configure_php_versions
+            save_config
+            echo "PHP versions updated."
+            ;;
+        2)
+            reset_configuration
+            ;;
+        *)
+            echo "Invalid choice. Exiting."
+            exit 1
+            ;;
+    esac
 else
-    echo "Starting new setup..."
-    read -p "Enter setup mode (subdirectory/rootpath): " mode
+    echo "Setup Script Options:"
+    echo "1) Configure (subdirectory mode)"
+    echo "2) Configure (rootpath mode)"
+    read -p "Enter your choice (1/2): " choice
+
+    case $choice in
+        1) mode="subdirectory" ;;
+        2) mode="rootpath" ;;
+        *) echo "Invalid choice. Exiting."; exit 1 ;;
+    esac
+
     configure_php_versions
+    configure_repository
     save_config
     replace_placeholders
 fi
 
-echo "Setup complete."
+echo "Setup script complete."
