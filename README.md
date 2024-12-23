@@ -9,8 +9,6 @@ ETA for 1.0: 2024-12-30
 
 (Description in progrees)
 
-(short story - this is base for easy testing your PHP libraries in multiple PHP versions)
-
 This repository provides two modes:
 - full testing all versions - it builds from start (including composer install, etc.) for 100% clean test
 - test with volume mapping - one version, you have to rebuild before switching to another version; its optimization for development
@@ -34,7 +32,7 @@ Currently im thinking about:
 
 ## Requirements
 
-- **Docker**: Obviously :P Installed and running on your system.
+- **Docker**: Installed and running on your system.
 
 ---
 
