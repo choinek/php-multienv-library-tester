@@ -1,13 +1,10 @@
 #!/bin/bash
 
-REPO_URL="https://github.com/choinek/php-library-test-docker"
+REPO_URL="https://github.com/choinek/php-multienv-library-tester"
 
 read_directory_name() {
-    read -p "Enter the name of the directory to clone the repository into: " TARGET_DIR < /dev/tty
-    if [[ -z $TARGET_DIR ]]; then
-        echo "Error: Directory name cannot be empty."
-        exit 1
-    fi
+    read -r -p "Enter the name of the directory to clone the repository into [default: php-multienv-library-tester]: " TARGET_DIR < /dev/tty
+    TARGET_DIR=${TARGET_DIR:-php-multienv-library-tester}
 }
 
 read_directory_name

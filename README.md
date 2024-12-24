@@ -1,181 +1,173 @@
 # PHP Library Test Environment with Docker
 
-Alpha 0.1. Final version will be released after:
+Beta. Final version will be released after:
 - linux tests
-- multiple libraries tests
-- talk with some people about it 
 
-ETA for 1.0: 2024-12-30
+**ETA for 1.0:** 2024-12-30
 
-(Description in progrees)
+## Overview
 
-This repository provides two modes:
-- full testing all versions - it builds from start (including composer install, etc.) for 100% clean test
-- test with volume mapping - one version, you have to rebuild before switching to another version; its optimization for development
+This repository makes it easy to test PHP libraries across multiple PHP versions using Docker. It provides two modes:
 
-Currently im thinking about:
-- override base command for tests (so you don't have to add it to composer.json)
-- optimizations - do not relay on docker cache adn think about vendor cache (which could be force cleared if needed)
+1. **Full Testing Mode**: Builds a fresh environment for each PHP version, ensuring clean tests.
+2. **Development Mode**: Uses volume mapping for faster testing during development, but requires rebuilding when switching PHP versions.
 
----
+Both modes operate independently, meaning you can run tests for all PHP versions without switching the local environment.
 
 ## Features
 
-- **Test Across Multiple PHP Versions**: Dynamically build and test PHP libraries in different PHP versions using Docker Compose.
-- **Local develoment version**: Set up a local development version to test your PHP libraries ad hoc (with mapped volume).
+- Test across multiple PHP versions.
+- Local development version for ad hoc testing.
+- Dynamically builds environments for each PHP version.
+- Options to override base test commands and optimize caching mechanisms.
 
 ---
 
 ## Requirements
 
-- **Docker**: Installed and running on your system.
+- **Docker**: Ensure Docker is installed and running on your system.
 
 ---
 
 ## Getting Started
 
-(! SCRIPT IN PROGRESS - IT WILL BE EASIER)
-
 ### Step 1: Download
 
+#### Download Automatically
 
-1. Download the repository as a ZIP file:
-    - Go to the [repository page](https://github.com/choinek/php-library-test-docker).
-    - Click on "Code" > "Download ZIP".
+Run the following command to set up the testing environment interactively:
 
-2. Unpack ZIP and remove README.md and .gitignore to not overwrite your current one :P - it will be fixed in future
-
-3. Move content to your library's root directory (with your `composer.json` file).
-
-### Step 2: Add Files to `.gitignore`
-
-To prevent these files from being tracked in your library's version control, add the following lines to your `.gitignore`:
-
-```
-# PHP Library Test Docker files
-docker-compose.yml
-docker-compose.test.yml
-Dockerfile
-Makefile
-php-library-test-docker-output/
+```bash
+curl -sSL https://raw.githubusercontent.com/choinek/php-multienv-library-tester/main/init.sh | bash
 ```
 
-### Step 3: Update `composer.json`
+#### b) Download Manually
 
-1. Add your cli for tests to `composer.json`:
-    ```json
-    {
-        "scripts": {
-            "php-library-test-docker-cmd": "vendor/bin/phpunit --testdox"
-        }
-    }
-    ```
+If you prefer, you can download the repository as a ZIP file:
 
-### Step 4: Adjust Dockerfile and docker-compose.test.yml
+1. Go to the [GitHub repository](https://github.com/choinek/php-multienv-library-tester).
+2. Click "Code" > "Download ZIP".
+3. Extract the ZIP file into your desired directory and follow the manual setup instructions in the repository.
 
-- You might need more PHP extensions or other dependencies in your Dockerfile. Adjust it as needed.
-- 
+The entire setup process is automated via the `setup.sh` script. Follow these steps:
 
+### Step 2: Run Setup
 
-### Local Development Setup
-
-1. Set up base PHP version for local development:
+1. Execute the setup script:
    ```bash
-   make setup-dev PHP_VERSION=8.1
+   bash setup.sh
    ```
 
-### Local Development Commands
+2. The script will:
+    - Configure the environment.
+    - Set up required files and directories.
+    - Prompt you for necessary inputs such as PHP versions and repository details.
+    - Allow you to set up specific PHP versions or modify them at any time in the future.
 
-#### Setup (you used it above)
-```bash
-make setup-dev
-```
+3. During setup, you can choose any PHP version you want to include in your testing environment.
 
-Set up the local development environment.
-
-- **Required Parameter**:
-    - `PHP_VERSION`: Specifies the PHP version to use.
-        - Example: `PHP_VERSION=8.1 make setup-dev`
+4. Once completed, the environment is ready for testing.
 
 ---
-#### Test local developments
+
+## Modes
+
+### Full Testing Mode
+
+Builds a fresh environment for each PHP version, including `composer install` and other setup tasks. This ensures clean testing.
+
+### Development Mode
+
+Uses volume mapping to test locally. Faster but it's not as clean and requires rebuilding when switching PHP versions.
+
+Both modes operate independently, so you can run tests for all PHP versions without switching the local environment.
+
+---
+
+## Commands Overview
+
+### Full Testing
+
+Run tests across all defined PHP versions:
+```bash
+make test-all
+```
+
+Optional parameters (provide as environment variables):
+- `PARALLEL=false`: Disable parallel execution.
+- `SKIP_LOGS=true`: Suppress log file generation.
+
+Example:
+```bash
+PARALLEL=false make test-all
+```
+
+### Specific Version Testing
+
+Run tests for a specific PHP version:
+```bash
+make test-version
+```
+
+Example:
+```bash
+make test-version
+```
+
+You will be prompted to enter the desired PHP version (e.g., 8.1).
+
+### Development Mode
+
+Run tests in a local development environment:
 ```bash
 make test-dev
 ```
-Run tests using the local development environment.
-Its optimized for fast tests (it uses volume mapping)
 
-- **No additional parameters.**
-    - Example: `make test-dev`
+### Coverage Report
 
----
+Generate a test coverage report:
+```bash
+make coverage
+```
 
-## Commands Overview - Full Testing
-
-### `make test-all`
-Run tests across all defined PHP versions.
-
-- **Optional Parameters**:
-    - `PARALLEL=false`: Disable parallel.
-        - Example: `PARALLEL=false make test-all`
-    - `SKIP_LOGS=true`: Suppress log file generation.
-        - Example: `SKIP_LOGS=true make test-all`
-
----
-
-### `make test-version`
-Run tests for a specific PHP version.
-
-- **Optional Parameters**:
-    - `SKIP_LOGS=true`: Suppress log file generation.
-
-      ```bash
-      SKIP_LOGS=true make test-version
-      ```
 ---
 
 ## Logs
 
-- Logs are stored in the `php-library-test-docker-output` directory - Makefile will create it if it doesn't exist.
+Logs are stored in the `php-library-test-docker-output` directory. The directory is automatically created by the Makefile if it does not exist.
 
 ---
 
-## Full Workflow
+## Workflow Examples
 
-1. Set up the development environment for PHP 8.1:
+1. **Set up environment**:
    ```bash
-   > make setup-dev PHP_VERSION=8.1
+   bash setup.sh
    ```
 
-2. Run tests using the local development environment:
+2. **Run tests in development mode**:
    ```bash
-   > make test-dev
+   make test-dev
    ```
 
-3. Run tests across all PHP versions using parallel - multiple PHP at once:
+3. **Run tests across all PHP versions in parallel**:
    ```bash
-   > make test-all
+   make test-all
    ```
 
-4. If you have problem with parallel, you can disable it:
+4. **Disable parallel testing**:
    ```bash
-   > PARALLEL=false make test-all
+   PARALLEL=false make test-all
    ```
 
-4. Something small to fix, so you fix it and want to test it without rebuilding local env:
-   ```bash
-    > make test-version
-    Enter PHP version (e.g., 8.1): 8.2
-   ```
-
-5. Run tests in parallel while suppressing logs:
-   ```bash
-   SKIP_LOGS=true make test-all
-   ```
-
-6Run tests for PHP 8.2:
+5. **Run tests for PHP 8.2**:
    ```bash
    make test-version
+   ```
+
+6. **Suppress logs while testing in parallel**:
+   ```bash
+   SKIP_LOGS=true make test-all
    ```
 
 ---

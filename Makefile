@@ -11,14 +11,39 @@ endif
 .PHONY: help
 help:
 	@echo "Usage:"
-	@echo "   Working with the project:"
-	@echo "      make test-all              - Run all tests"
-	@echo "      make test-version          - Run tests for a specific PHP version"
-	@echo "      make test-dev              - Run tests in development environment"
-	@echo "      make coverage              - Generate coverage report"
-	@echo "   Setup:"
-	@echo "      make setup                 - Set up the project configuration"
-	@echo "      make validate              - Validate the environment"
+	@echo "   make test-all"
+	@echo "      Description: Run tests in all PHP versions"
+	@echo "      Optional parameters:"
+	@echo "         - PARALLEL=false - Disable parallel execution (default: true)"
+	@echo "               Usage: PARALLEL=false make test-all"
+	@echo "         - SKIP_LOGS=true - Suppress log file generation (outputs to /dev/null)"
+	@echo "               Usage: SKIP_LOGS=true make test-all"
+	@echo ""
+	@echo "   make test-version"
+	@echo "      Description: Run tests in a specific PHP version (prompts for version)"
+	@echo "      Optional parameters:"
+	@echo "         - SKIP_LOGS=true - Suppress log file generation"
+	@echo "               Usage: SKIP_LOGS=true make test-version"
+	@echo ""
+	@echo "   make test-dev"
+	@echo "      Description: Run tests using the local development environment"
+	@echo "      No optional parameters"
+	@echo ""
+	@echo "   make coverage"
+	@echo "      Description: Generate a test coverage report based on the local development environment"
+	@echo "      No optional parameters"
+	@echo ""
+	@echo "   make setup"
+	@echo "      Description: Set up the project configuration"
+	@echo "      No optional parameters"
+	@echo ""
+	@echo "   make validate"
+	@echo "      Description: Validate the environment configuration"
+	@echo "      No optional parameters"
+	@echo ""
+	@echo "   make cleanup"
+	@echo "      Description: Remove dangling Docker images from the project"
+	@echo "      No optional parameters"
 
 .PHONY: setup
 setup:
@@ -32,7 +57,7 @@ PARALLEL ?= true
 SKIP_LOGS ?= false
 BUILD_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION-build-output.log)
 RUN_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION-run-output.log)
-SUCCEED_MESSAGE="✔ PHP $$CURRENTVERSION - test succeed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log for details.")"
+SUCCEED_MESSAGE="✔ PHP $$CURRENTVERSION - test succeed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION-run-output.log for details.")"
 PARALLEL_FINAL_MESSAGE="All parallel tests completed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR) for logs.")"
 FAILED_MESSAGE="✘ PHP $$CURRENTVERSION - tests failed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log and $(LOG_DIR)/test-$$CURRENTVERSION-build.log for details.")"
 
@@ -45,7 +70,6 @@ prepare-logs:
 prepare-framework:
 	@mkdir -p $(LOG_DIR)
 	@if [ -f .dockerignore ]; then \
-		echo ".dockerignore exists. Verifying contents..."; \
 		if ! grep -q 'composer.lock' .dockerignore; then \
 			echo "Error: .dockerignore does not include 'composer.lock'. Please add it."; \
 			exit 1; \
@@ -93,7 +117,7 @@ ifeq ($(PARALLEL), true)
 			break; \
 		fi; \
 	done; \
-	docker compose -f docker-compose.test.yml down --remove-orphans
+	docker compose -f docker-compose.test.yml down --remove-orphans > /dev/null 2>&1 || true
 	@echo $(PARALLEL_FINAL_MESSAGE)
 else
 	@cat "$(LOG_DIR)/.php_versions" | while read CURRENTVERSION; do \
@@ -103,18 +127,24 @@ else
 		echo "$$(printf '%s' $(SUCCEED_MESSAGE))" || \
 		echo "$(FAILED_MESSAGE)"); \
 	done; \
-	docker compose -f docker-compose.test.yml down --remove-orphans
+	docker compose -f docker-compose.test.yml down --remove-orphans > /dev/null 2>&1 || true
 endif
 
+PHP_VERSIONS=$(shell tr '\n' ',' < $(LOG_DIR)/.php_versions | sed -e 's/,$$//')
 test: test-all
-
-test-version: prepare-framework
-	@read -p "Enter PHP version (e.g., 8.1): " CURRENTVERSION && \
-	echo "Starting tests for PHP $$PHP_VERSION..." && \
-	DOCKER_BUILDKIT=1 docker compose -f docker-compose.test.yml build service-library-test-$$CURRENTVERSION > $(BUILD_OUTPUT) 2>&1 && \
-	docker compose -f docker-compose.test.yml run --rm service-library-test-$$CURRENTVERSION > $(RUN_OUTPUT) 2>&1 && \
-	{ echo "$(SUCCEED_MESSAGE)"; } || { echo "$(FAILED_MESSAGE)"; } && \
-	docker compose -f docker-compose.test.yml down --remove-orphans
+test-version: prepare-framework get-versions
+	@echo "Available PHP versions: $(PHP_VERSIONS)" && \
+	read -p "Enter PHP version: " CURRENTVERSION < /dev/tty && \
+	if grep -q "^$$CURRENTVERSION$$" "$(LOG_DIR)/.php_versions"; then \
+		echo "Starting tests for PHP $$CURRENTVERSION..."; \
+		DOCKER_BUILDKIT=1 docker compose -f docker-compose.test.yml build service-library-test-$$CURRENTVERSION > $(BUILD_OUTPUT) 2>&1 && \
+		docker compose -f docker-compose.test.yml run --rm service-library-test-$$CURRENTVERSION > $(RUN_OUTPUT) 2>&1 && \
+		{ echo "$(SUCCEED_MESSAGE)"; } || { echo "$(FAILED_MESSAGE)"; }; \
+	else \
+		echo "Error: PHP version $$CURRENTVERSION is not valid or not defined in services."; \
+		exit 1; \
+	fi && \
+	docker compose -f docker-compose.test.yml down --remove-orphans > /dev/null 2>&1 || true
 
 .PHONY: coverage
 coverage: prepare-framework

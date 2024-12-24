@@ -8,10 +8,41 @@ while getopts "v" opt; do
             ;;
         *)
             echo "Invalid option: -$OPTARG" >&2
+            echo "Usage: $0 [-v]"
+            echo ""
+            echo "Options:"
+            echo "  -v Enable verbose mode to display detailed output."
             exit 1
             ;;
     esac
 done
+
+SUPPORTED_OSTYPES=("linux-gnu" "darwin")
+
+if [[ -z "$OSTYPE" ]]; then
+    echo "The OSTYPE environment variable is not set."
+    echo "Supported values:"
+    for ost in "${SUPPORTED_OSTYPES[@]}"; do
+        echo "  - $ost"
+    done
+
+    read -p "Please select your OS type from the list above: " user_ostype
+
+    if [[ " ${SUPPORTED_OSTYPES[*]} " == *"$user_ostype"* ]]; then
+        export OSTYPE="$user_ostype"
+        echo "OSTYPE set to $OSTYPE."
+    else
+        echo "Invalid OSTYPE: $user_ostype. Exiting."
+        exit 1
+    fi
+fi
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    SED_INPLACE="sed -i ''"
+else
+    SED_INPLACE="sed -i"
+fi
+
 
 CONFIG_FILE=".php-library-test-docker.config"
 PLACEHOLDER_DIR="{{PLACEHOLDER_DIR}}"
@@ -340,13 +371,8 @@ replace_placeholders() {
             cp "$template_file" "$output_file"
             esuccesshidden "Copied $template_file to $output_file"
 
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                sed -i '' "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file"
-                sed -i '' "s|$PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT|$PHP_VERSION_ACTIVE_DEVELOPMENT|g" "$output_file"
-            else
-                sed -i "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file"
-                sed -i "s|$PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT|$PHP_VERSION_ACTIVE_DEVELOPMENT|g" "$output_file"
-            fi
+            $SED_INPLACE "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file"
+            $SED_INPLACE "s|$PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT|$PHP_VERSION_ACTIVE_DEVELOPMENT|g" "$output_file"
             esuccess "Replaced placeholders in $output_file"
 
         else
