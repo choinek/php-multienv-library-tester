@@ -297,18 +297,9 @@ configure_repository() {
             fi
         done
 
-        if [[ -f src-library/.gitignore ]]; then
-            cp src-library/.gitignore .dockerignore
-            esuccess "Copied .gitignore from library to .dockerignore."
-        else
-            ewarning " !: .gitignore not found in the repository."
-        fi
-
-        if ! grep -q "composer.lock" .dockerignore; then
-            echo "composer.lock" >> .dockerignore
-            esuccess "Added 'composer.lock' to .dockerignore."
-            ewarning " ! Please ensure 'composer.lock' is added to .gitignore in your library repository."
-        fi
+        einfohidden "Running dockerignore.sh to create/update .dockerignore..."
+        sh ./dockerignore.sh
+        esuccesshidden "sh .dockerignore finished with status: $?"
     else
         einfo "Skipping repository setup."
     fi
