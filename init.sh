@@ -1,5 +1,35 @@
 #!/bin/bash
 
+
+validate_docker() {
+    echo "Validating Docker installation..."
+    if ! command -v docker &>/dev/null; then
+        echo "Error: Docker is not installed. Please install Docker 20.10.0 or later."
+        exit 1
+    fi
+
+    DOCKER_VERSION=$(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+    MIN_VERSION="20.10.0"
+
+    # Portable version comparison using awk
+    if [[ $(echo -e "$DOCKER_VERSION\n$MIN_VERSION" | awk '{ print $1 | "sort" }' | head -n 1) != "$MIN_VERSION" ]]; then
+        echo "Error: Docker version $DOCKER_VERSION is too old. Please upgrade to version 20.10.0 or later."
+        exit 1
+    fi
+
+    echo "Docker version $DOCKER_VERSION is supported."
+}
+
+# Function to check if jq is installed or fallback to grep
+validate_jq() {
+    if ! command -v jq &>/dev/null; then
+        echo "Warning: jq is not installed. Falling back to grep. Results may not be 100% accurate."
+        USE_JQ=false
+    else
+        USE_JQ=true
+    fi
+}
+
 REPO_URL="https://github.com/choinek/php-multienv-library-tester"
 
 read_directory_name() {
@@ -22,6 +52,9 @@ if [[ $? -ne 0 ]]; then
 fi
 
 cd "$TARGET_DIR" || exit 1
+
+validate_docker
+validate_jq
 
 if [[ -f setup.sh ]]; then
     echo "Running setup script..."
