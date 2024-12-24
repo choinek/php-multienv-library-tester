@@ -38,9 +38,9 @@ if [[ -z "$OSTYPE" ]]; then
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    SED_INPLACE="sed -i ''"
+    SED_INPLACE=("sed" "-i" "")
 else
-    SED_INPLACE="sed -i"
+    SED_INPLACE=("sed" "-i")
 fi
 
 
@@ -370,9 +370,8 @@ replace_placeholders() {
         if [[ -f $template_file ]]; then
             cp "$template_file" "$output_file"
             esuccesshidden "Copied $template_file to $output_file"
-
-            $SED_INPLACE "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file"
-            $SED_INPLACE "s|$PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT|$PHP_VERSION_ACTIVE_DEVELOPMENT|g" "$output_file"
+            "${SED_INPLACE[@]}" "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file"
+            "${SED_INPLACE[@]}" "s|$PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT|$PHP_VERSION_ACTIVE_DEVELOPMENT|g" "$output_file"
             esuccess "Replaced placeholders in $output_file"
 
         else
