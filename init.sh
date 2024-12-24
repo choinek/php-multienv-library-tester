@@ -11,8 +11,7 @@ validate_docker() {
     DOCKER_VERSION=$(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
     MIN_VERSION="20.10.0"
 
-    # Portable version comparison using awk
-    if [[ $(echo -e "$DOCKER_VERSION\n$MIN_VERSION" | awk '{ print $1 | "sort" }' | head -n 1) != "$MIN_VERSION" ]]; then
+    if [[ $(echo -e "$DOCKER_VERSION\n$MIN_VERSION" | sort -V | head -n 1) != "$MIN_VERSION" ]]; then
         echo "Error: Docker version $DOCKER_VERSION is too old. Please upgrade to version 20.10.0 or later."
         exit 1
     fi
@@ -20,7 +19,6 @@ validate_docker() {
     echo "Docker version $DOCKER_VERSION is supported."
 }
 
-# Function to check if jq is installed or fallback to grep
 validate_jq() {
     if ! command -v jq &>/dev/null; then
         echo "Warning: jq is not installed. Falling back to grep. Results may not be 100% accurate."
@@ -58,7 +56,7 @@ validate_jq
 
 if [[ -f setup.sh ]]; then
     echo "Running setup script..."
-    bash setup.sh
+    bash -i setup.sh
 else
     echo "Error: setup.sh not found in the repository."
     exit 1
