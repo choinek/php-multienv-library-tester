@@ -9,6 +9,7 @@ services:
         PHP_VERSION: {{PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT}}
     volumes:
       - {{PLACEHOLDER_DIR}}:/app
+      - ./php-library-test-docker-output/coverage:/coverage
     environment:
       XDEBUG_MODE: coverage
     command: >

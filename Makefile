@@ -1,4 +1,4 @@
-.PHONY: all prepare-logs prepare-framework get-versions validate setup test-all test-version test-dev coverage end help
+.PHONY: all prepare-logs prepare-framework get-versions validate setup test-all test test-version test-dev coverage end help
 
 CONFIG_FILE=.php-library-test-docker.config
 
@@ -30,8 +30,8 @@ PHP_VERSION ?= not-set
 LOG_DIR=php-library-test-docker-output
 PARALLEL ?= true
 SKIP_LOGS ?= false
-BUILD_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION-build.log)
-RUN_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION.log)
+BUILD_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION-build-output.log)
+RUN_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTVERSION-run-output.log)
 SUCCEED_MESSAGE="✔ PHP $$CURRENTVERSION - test succeed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log for details.")"
 PARALLEL_FINAL_MESSAGE="All parallel tests completed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR) for logs.")"
 FAILED_MESSAGE="✘ PHP $$CURRENTVERSION - tests failed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log and $(LOG_DIR)/test-$$CURRENTVERSION-build.log for details.")"
@@ -106,6 +106,8 @@ else
 	docker compose -f docker-compose.test.yml down --remove-orphans
 endif
 
+test: test-all
+
 test-version: prepare-framework
 	@read -p "Enter PHP version (e.g., 8.1): " CURRENTVERSION && \
 	echo "Starting tests for PHP $$PHP_VERSION..." && \
@@ -117,13 +119,13 @@ test-version: prepare-framework
 .PHONY: coverage
 coverage: prepare-framework
 	@mkdir -p $(LOG_DIR)/coverage
-	docker compose run --rm library-development composer php-library-test-docker-cmd -- --coverage-html=$(LOG_DIR)/coverage
+	docker compose run --rm library-development sh -c "composer install && composer php-library-test-docker-cmd -- --coverage-html=/coverage"
 	@echo "Coverage report generated at $(LOG_DIR)/coverage"
 
 test-dev: prepare-framework
 	@echo "Running tests in development environment..."
-	docker compose run --rm library-development > $(LOG_DIR)/dev-tests.log 2>&1
-	@echo "Finished running tests. Check $(LOG_DIR)/dev-tests.log for details."
+	docker compose run --rm library-development > $(LOG_DIR)/development-tests.log 2>&1
+	@echo "Finished running tests. Check $(LOG_DIR)/development-tests.log for details."
 
 .PHONY: cleanup
 cleanup:
