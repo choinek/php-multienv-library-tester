@@ -38,7 +38,10 @@ Both modes operate independently, meaning you can run tests for all PHP versions
 Run the following command to set up the testing environment interactively:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/choinek/php-multienv-library-tester/main/init.sh | bash
+export TARGET_DIR=php-multienv-library-tester \
+    && curl -sSL https://raw.githubusercontent.com/choinek/php-multienv-library-tester/main/init.sh | bash \
+    && cd "$TARGET_DIR" \
+    && bash setup.sh
 ```
 
 #### b) Download Manually

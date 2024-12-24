@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 validate_docker() {
     echo "Validating Docker installation..."
     if ! command -v docker &>/dev/null; then
@@ -19,23 +18,12 @@ validate_docker() {
     echo "Docker version $DOCKER_VERSION is supported."
 }
 
-validate_jq() {
-    if ! command -v jq &>/dev/null; then
-        echo "Warning: jq is not installed. Falling back to grep. Results may not be 100% accurate."
-        USE_JQ=false
-    else
-        USE_JQ=true
-    fi
-}
-
 REPO_URL="https://github.com/choinek/php-multienv-library-tester"
 
-read_directory_name() {
+if [[ -z "$TARGET_DIR" ]]; then
     read -r -p "Enter the name of the directory to clone the repository into [default: php-multienv-library-tester]: " TARGET_DIR < /dev/tty
     TARGET_DIR=${TARGET_DIR:-php-multienv-library-tester}
-}
-
-read_directory_name
+fi
 
 if [[ -d $TARGET_DIR ]]; then
     echo "Error: Directory '$TARGET_DIR' already exists. Exiting."
@@ -52,12 +40,7 @@ fi
 cd "$TARGET_DIR" || exit 1
 
 validate_docker
-validate_jq
 
-if [[ -f setup.sh ]]; then
-    echo "Running setup script..."
-    bash -i setup.sh
-else
-    echo "Error: setup.sh not found in the repository."
-    exit 1
-fi
+echo "Repository cloned into '$TARGET_DIR'."
+echo "Run the following command to proceed with the setup:"
+echo "cd $TARGET_DIR && bash setup.sh"
