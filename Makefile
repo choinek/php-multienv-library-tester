@@ -1,13 +1,14 @@
+.PHONY: all prepare-logs prepare-framework get-versions validate setup test-all test-version test-dev coverage end help
+
 CONFIG_FILE=.php-library-test-docker.config
 
 ifeq ($(wildcard $(CONFIG_FILE)),)
   ifneq ($(MAKECMDGOALS),setup help)
-    $(info Configuration file $(CONFIG_FILE) not found.)
-    $(info Run 'make setup' or 'bash setup.sh' first.)
+    $(error Configuration file $(CONFIG_FILE) not found. Run 'make setup' or 'bash setup.sh' first.)
   endif
 endif
 
-
+.PHONY: help
 help:
 	@echo "Usage:"
 	@echo "   Working with the project:"
@@ -17,9 +18,9 @@ help:
 	@echo "      make coverage              - Generate coverage report"
 	@echo "   Setup:"
 	@echo "      make setup                 - Set up the project configuration"
-	@echo "      make dev-set-php-version   - Set up development environment php version"
 	@echo "      make validate              - Validate the environment"
 
+.PHONY: setup
 setup:
 	bash ./setup.sh
 
@@ -40,9 +41,7 @@ prepare-logs:
 	echo "Preparing logs..."
 	@mkdir -p $(LOG_OUTPUT_DIR)
 
-.PHONY: all
-all: prepare-logs
-
+.PHONY: prepare-framework
 prepare-framework:
 	@mkdir -p $(LOG_DIR)
 	@if [ -f .dockerignore ]; then \
@@ -56,10 +55,12 @@ prepare-framework:
 		cp $LIBRARY_DIR/.gitignore .dockerignore; \
 	fi
 
+.PHONY: get-versions
 get-versions:
 	@grep 'service-library-test-' docker-compose.test.yml | sed -E 's/.*service-library-test-([0-9.]+):.*/\1/' | sort -u > "$(LOG_DIR)/.php_versions"
 
 
+.PHONY: validate
 validate:
 	@bash ./validate.sh
 
@@ -113,14 +114,6 @@ test-version: prepare-framework
 	{ echo "$(SUCCEED_MESSAGE)"; } || { echo "$(FAILED_MESSAGE)"; } && \
 	docker compose -f docker-compose.test.yml down --remove-orphans
 
-dev-set-php-version: prepare-framework
-	@if [ "$(PHP_VERSION)" = "not-set" ]; then \
-		echo "Please set PHP_VERSION in the envrionment, e.g., PHP_VERSION=8.1 make dev-set-php-version"; \
-		exit 1; \
-	fi
-	docker compose build library-development > $(LOG_DIR)/dev-build.log 2>&1
-
-
 .PHONY: coverage
 coverage: prepare-framework
 	@mkdir -p $(LOG_DIR)/coverage
@@ -128,4 +121,13 @@ coverage: prepare-framework
 	@echo "Coverage report generated at $(LOG_DIR)/coverage"
 
 test-dev: prepare-framework
+	@echo "Running tests in development environment..."
 	docker compose run --rm library-development > $(LOG_DIR)/dev-tests.log 2>&1
+	@echo "Finished running tests. Check $(LOG_DIR)/dev-tests.log for details."
+
+.PHONY: cleanup
+cleanup:
+	@if [ -n "$$(docker images --filter "label=com.docker.compose.project=$(basename $(pwd))" -q --filter "dangling=true")" ]; then \
+		docker rmi $$(docker images --filter "label=com.docker.compose.project=$(basename $(pwd))" -q --filter "dangling=true") >/dev/null 2>&1; \
+		echo "(Cleanup) Dangling images removed."; \
+	fi

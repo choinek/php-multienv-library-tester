@@ -13,5 +13,6 @@ src-library
 
 # Files which will be generated from templates
 docker-compose.yml
+docker-compose.test.yml
 Dockerfile
 validate.sh
