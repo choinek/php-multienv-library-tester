@@ -31,9 +31,7 @@ Both modes operate independently, meaning you can run tests for all PHP versions
 
 ## Getting Started
 
-### Step 1: Download
-
-#### Download Automatically
+### (Suggested) Quick way
 
 Run the following command to set up the testing environment interactively:
 
@@ -44,7 +42,9 @@ export TARGET_DIR=php-multienv-library-tester \
     && bash setup.sh
 ```
 
-#### b) Download Manually
+### Manual
+
+#### Manual - Download
 
 If you prefer, you can download the repository as a ZIP file:
 
@@ -54,7 +54,7 @@ If you prefer, you can download the repository as a ZIP file:
 
 The entire setup process is automated via the `setup.sh` script. Follow these steps:
 
-### Step 2: Run Setup
+#### Manual - Run setup
 
 1. Execute the setup script:
    ```bash
