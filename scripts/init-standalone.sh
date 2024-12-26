@@ -32,7 +32,8 @@ fi
 
 echo "Cloning repository into '$TARGET_DIR'..."
 git clone "$REPO_URL" "$TARGET_DIR"
-if [[ $? -ne 0 ]]; then
+gitCmdStatus=$?
+if [[ $gitCmdStatus -ne 0 ]]; then
     echo "Error: Failed to clone repository. Exiting."
     exit 1
 fi
@@ -43,4 +44,4 @@ validate_docker
 
 echo "Repository cloned into '$TARGET_DIR'."
 echo "Run the following command to proceed with the setup:"
-echo "cd $TARGET_DIR && bash setup.sh"
+echo " > cd $TARGET_DIR && bash setup.sh --"

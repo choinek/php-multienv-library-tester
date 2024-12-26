@@ -1,21 +1,69 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERBOSE=false
-while getopts "v" opt; do
+FORCE_MODE=""
+TERMINAL_COLOR=true
+
+
+while getopts "v-:" opt; do
     case $opt in
         v)
             VERBOSE=true
             ;;
+        -)
+            case $OPTARG in
+                mode=*)
+                    FORCE_MODE="${OPTARG#mode=}"
+                    if [[ "$FORCE_MODE" != "standalone" && "$FORCE_MODE" != "composer" && "$FORCE_MODE" != "rootpath" ]]; then
+                        echo "Invalid mode: $FORCE_MODE" >&2
+                        echo "Valid modes are: standalone, composer, rootpath."
+                        exit 1
+                    fi
+                    ;;
+                color=*)
+                    COLOR_OPTION="${OPTARG#color=}"
+                    if [[ "$COLOR_OPTION" == "false" ]]; then
+                        TERMINAL_COLOR=false
+                    elif [[ "$COLOR_OPTION" != "true" ]]; then
+                        echo "Invalid value for --color: $COLOR_OPTION. Use 'true' or 'false'."
+                        exit 1
+                    fi
+                    ;;
+                *)
+                    echo "Invalid option: --$OPTARG" >&2
+                    echo "Usage: $0 [-v] [--mode=<standalone|composer|>]"
+                    echo ""
+                    echo "Options:"
+                    echo "  -v         Enable verbose mode to display detailed output."
+                    echo "  --mode     Set the mode to a specific value (e.g., --mode=standalone)."
+                    exit 1
+                    ;;
+            esac
+            ;;
         *)
             echo "Invalid option: -$OPTARG" >&2
-            echo "Usage: $0 [-v]"
+            echo "Usage: $0 [-v] [--mode=<value>]"
             echo ""
             echo "Options:"
-            echo "  -v Enable verbose mode to display detailed output."
+            echo "  -v         Enable verbose mode to display detailed output."
+            echo "  --mode     Set the mode to a specific value (e.g., --mode=test)."
             exit 1
             ;;
     esac
 done
+
+if [ "$VERBOSE" = true ]; then
+    echo "Verbose mode enabled."
+fi
+
+if [ -n "$FORCE_MODE" ]; then
+    echo "Force mode set to: $FORCE_MODE"
+fi
+
+if [ "$TERMINAL_COLOR" = false ]; then
+    echo "Terminal color disabled."
+fi
 
 SUPPORTED_OSTYPES=("linux-gnu" "darwin")
 
@@ -44,7 +92,7 @@ else
 fi
 
 
-CONFIG_FILE=".php-library-test-docker.config"
+CONFIG_FILE="$SCRIPT_DIR/../.php-library-test-docker.config"
 PLACEHOLDER_DIR="{{PLACEHOLDER_DIR}}"
 PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT="{{PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT}}"
 DEFAULT_PHP_VERSIONS="8.1,8.2,8.3,8.4"
@@ -134,7 +182,7 @@ etext_optionadv() {
     first_indent=$(echo "$text" | grep -oE "^\s*")
     local indented_text
 
-    if [[ -n $color_code && -n $style_code ]]; then
+    if [[ $TERMINAL_COLOR == true && -n $color_code && -n $style_code ]]; then
         indented_text=$(wrap_text "$text" $max_width "$first_indent" "$extra_indent")
         echo -e "\033[${style_code};${color_code}m${indented_text}${RESET_COLOR}"
     else
@@ -209,7 +257,12 @@ eoption() {
     after="${text#*)}"
     indent=$((left_width + 8))
     before=$(printf "%${left_width}s" "$before")
-    etext_optionadv white "$style" "  ➤ \033[0;93m$before)\033[0;97m$after" false $indent
+    if [[ $TERMINAL_COLOR == true ]]; then
+        etext_optionadv white "$style" "  ➤ \033[0;93m$before)\033[0;97m$after" false $indent
+
+    else
+        etext_optionadv white "$style" "  ➤ $before)$after" false $indent
+    fi
 }
 
 eoptionadv() {
@@ -307,17 +360,19 @@ configure_repository() {
             fi
             echo ""
             einfo "Actions to perform:"
-            eaction "git clone \"$repo_url\" src-library"
+            clone_command=("git" "clone" "$repo_url" "$SCRIPT_DIR/../src-library")
+            eaction "${clone_command[@]}"
             echo ""
             confirm=$(niceprompt "Execute [Y/n]?")
             if [[ $confirm != "n" && $confirm != "N" ]]; then
                 mkdir -p src-library
                 if [[ "$VERBOSE" == "true" ]]; then
-                  git clone "$repo_url" src-library
+                    "${clone_command[@]}"
                 else
-                  git clone "$repo_url" src-library >/dev/null 2>&1
+                    "${clone_command[@]}" >/dev/null 2>&1
                 fi
-                if [[ $? -eq 0 ]]; then
+                gitCmdStatus=$?
+                if [[ $gitCmdStatus -eq 0 ]]; then
                     einfo "Repository cloned into src-library."
                     break
                 else
@@ -329,8 +384,8 @@ configure_repository() {
         done
 
         einfohidden "Running dockerignore.sh to create/update .dockerignore..."
-        sh ./dockerignore.sh
-        esuccesshidden "sh .dockerignore finished with status: $?"
+            sh "$SCRIPT_DIR/scripts/dockerignore.sh"
+        esuccesshidden "dockerignore.sh finished with status: $?"
     else
         einfo "Skipping repository setup."
     fi
@@ -355,8 +410,9 @@ replace_placeholders() {
     fi
 
     case $MODE in
-        subdirectory) REPLACEMENT="./src-library" ;;
+        subdirectory) REPLACEMENT="/src-library" ;;
         rootpath) REPLACEMENT="." ;;
+        composer) REPLACEMENT="../../../" ;;
         *)
             eerror "Unsupported mode '$MODE' in configuration."
             exit 1
@@ -364,8 +420,8 @@ replace_placeholders() {
     esac
 
     for file in "${FILES_WITH_PLACEHOLDERS[@]}"; do
-        template_file="$file.template"
-        output_file="$file"
+        template_file="$SCRIPT_DIR/../templates/$file.template"
+        output_file="$SCRIPT_DIR/../$file"
         eheaderhidden "Processing: $template_file -> $output_file"
         if [[ -f $template_file ]]; then
             cp "$template_file" "$output_file"
@@ -387,8 +443,8 @@ replace_placeholders() {
 
 
 generate_docker_compose() {
-    local template_file="docker-compose.test.yml.template"
-    local output_file="docker-compose.test.yml"
+    local template_file="$SCRIPT_DIR/../docker-compose.test.yml.template"
+    local output_file="$SCRIPT_DIR/../docker-compose.test.yml"
 
     if [[ -f $template_file ]]; then
         template=$(<"$template_file")
@@ -488,7 +544,13 @@ configure_active_php_version() {
 }
 
 
-main_menu() {
+mode_main_menu() {
+    if [[ -n "$FORCE_MODE" ]]; then
+        MODE=$FORCE_MODE
+        einfohidden "Selected force mode: $MODE"
+        return
+    fi
+
     while true; do
         if [[ $SELF_DEVELOPMENT == "true" ]]; then
             echo "   ! Warning - you are using development mode. It's not intended to test libraries, but to develop this script."
@@ -628,7 +690,7 @@ update_main_menu() {
 if load_config; then
        update_main_menu
 else
-    main_menu
+    mode_main_menu
     configure_php_versions
     configure_active_php_version
     configure_repository
