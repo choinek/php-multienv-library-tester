@@ -1,4 +1,4 @@
-.PHONY: all prepare-logs prepare-framework get-versions validate setup test-all test test-version test-dev coverage end help
+.PHONY: all prepare-logs prepare-framework get-versions validate setup load-flags test-all test test-version test-dev coverage end help
 
 CONFIG_FILE=.php-library-test-docker.config
 
@@ -51,6 +51,14 @@ setup:
 
 LIBRARY_DIR=$(shell awk -F= '/^library_dir=/{print $$2}' $(CONFIG_FILE))
 
+ifeq ($(LIBRARY_DIR),)
+    LIBRARY_DIR=src-library
+else ifneq ($(wildcard $(LIBRARY_DIR)),)
+    LIBRARY_DIR=$(LIBRARY_DIR)
+else
+    LIBRARY_DIR=src-library
+endif
+
 PHP_VERSION ?= not-set
 LOG_DIR=php-library-test-docker-output
 PARALLEL ?= true
@@ -60,6 +68,28 @@ RUN_OUTPUT=$(if $(filter true,$(SKIP_LOGS)),/dev/null,$(LOG_DIR)/test-$$CURRENTV
 SUCCEED_MESSAGE="✔ PHP $$CURRENTVERSION - test succeed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION-run-output.log for details.")"
 PARALLEL_FINAL_MESSAGE="All parallel tests completed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR) for logs.")"
 FAILED_MESSAGE="✘ PHP $$CURRENTVERSION - tests failed. $(if $(filter true,$(SKIP_LOGS)),"","Check $(LOG_DIR)/test-$$CURRENTVERSION.log and $(LOG_DIR)/test-$$CURRENTVERSION-build.log for details.")"
+
+ifneq ("$(wildcard .php-multienv-library.config)","")
+    include .php-multienv-library.config
+    export $(shell sed -n 's/^\(PMLTC_FLAG_[^=]*\)=.*/\1/p' .php-multienv-library.config)
+else
+    $(info No .php-multienv-library.config file found. Skipping flag loading.)
+endif
+
+.PHONY: load-flags
+load-flags:
+	@echo "Loading flags from .php-multienv-library.config..."
+	@if [ -f .php-multienv-library.config ]; then \
+		while IFS='=' read -r key value; do \
+			if echo "$$key" | grep -q '^PMLTC_FLAG_'; then \
+				export "$$key=$$value"; \
+				eval "$$key=$$value"; \
+				echo "Loaded $$key=$$value"; \
+			fi; \
+		done < .php-multienv-library.config; \
+	else \
+		echo "No .php-multienv-library.config file found. Skipping flag loading."; \
+	fi
 
 .PHONY: prepare-logs
 prepare-logs:
@@ -88,7 +118,25 @@ get-versions:
 validate:
 	@bash ./validate.sh
 
-test-all: prepare-framework get-versions
+.PHONY: update-repositories
+update-repositories: load-flags
+	@echo "Debug: PMLTC_FLAG_AUTO_UPDATE=$(PMLTC_FLAG_AUTO_UPDATE)"
+	@echo "Debug: LIBRARY_DIR=$(LIBRARY_DIR)"
+ifeq ($(PMLTC_FLAG_AUTO_UPDATE),true)
+	@echo "Auto-update repositories enabled. Updating all repositories..."
+	@if [ -d $(LIBRARY_DIR) ]; then \
+		echo "Updating $(LIBRARY_DIR)..."; \
+		cd $(LIBRARY_DIR) && git pull origin main || \
+		(echo "Error: Failed to update $(LIBRARY_DIR). Please check the repository." && exit 1); \
+	else \
+		echo "Warning: $(LIBRARY_DIR) directory not found. Skipping update."; \
+	fi
+else
+	@echo "PMLTC = $(PMLTC_FLAG_AUTO_UPDATE) Auto-update repositories disabled. Skipping updates."
+endif
+
+test: test-all
+test-all: update-repositories prepare-framework get-versions
 ifeq ($(PARALLEL), true)
 	@cat "$(LOG_DIR)/.php_versions" | while read CURRENTVERSION; do \
 		( \
@@ -131,8 +179,8 @@ else
 endif
 
 PHP_VERSIONS=$(shell tr '\n' ',' < $(LOG_DIR)/.php_versions | sed -e 's/,$$//')
-test: test-all
-test-version: prepare-framework get-versions
+
+test-version: update-repositories prepare-framework get-versions
 	@echo "Available PHP versions: $(PHP_VERSIONS)" && \
 	read -p "Enter PHP version: " CURRENTVERSION < /dev/tty && \
 	if grep -q "^$$CURRENTVERSION$$" "$(LOG_DIR)/.php_versions"; then \
@@ -152,7 +200,7 @@ coverage: prepare-framework
 	docker compose run --rm library-development sh -c "composer install && composer php-library-test-docker-cmd -- --coverage-html=/coverage"
 	@echo "Coverage report generated at $(LOG_DIR)/coverage"
 
-test-dev: prepare-framework
+test-dev: update-repositories prepare-framework
 	@echo "Running tests in development environment..."
 	docker compose run --rm library-development > $(LOG_DIR)/development-tests.log 2>&1
 	@echo "Finished running tests. Check $(LOG_DIR)/development-tests.log for details."
