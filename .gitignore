@@ -1,6 +1,9 @@
 # IDE
 .idea
 
+# Choinek's repo handling scripts
+.choinek-scripts
+
 # Output
 php-library-test-docker-output
 
