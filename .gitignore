@@ -4,6 +4,9 @@
 # Output
 php-library-test-docker-output
 
+# Scripts
+.choinek-scripts
+
 # Subdirectory for library and library configured files
 src-library
 .dockerignore
