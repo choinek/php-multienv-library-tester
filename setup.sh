@@ -300,7 +300,7 @@ configure_repository() {
    if [[ $clone_repo != "n" && $clone_repo != "N" ]]; then
       while true; do
          repo_url=$(niceprompt "Enter the repository address: ")
-         if [[ -z $rpo_url ]]; then
+         if [[ -z $repo_url ]]; then
             continue
          fi
          echo ""
