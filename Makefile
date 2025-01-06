@@ -1,4 +1,4 @@
-.PHONY: all prepare-logs prepare-framework get-versions validate setup load-flags test-all test test-version test-dev coverage end help
+.PHONY: all prepare-logs prepare-framework get-versions validate setup load-flags test-all test test-version dev-test coverage end help
 
 CONFIG_FILE=.php-library-test-docker.config
 
@@ -25,7 +25,7 @@ help:
 	@echo "         - SKIP_LOGS=true - Suppress log file generation"
 	@echo "               Usage: SKIP_LOGS=true make test-version"
 	@echo ""
-	@echo "   make test-dev"
+	@echo "   make dev-test"
 	@echo "      Description: Run tests using the local development environment"
 	@echo "      No optional parameters"
 	@echo ""
@@ -197,13 +197,8 @@ test-version: update-repositories prepare-framework get-versions
 .PHONY: coverage
 coverage: prepare-framework
 	@mkdir -p $(LOG_DIR)/coverage
-	docker compose run --rm library-development sh -c "composer install && composer php-library-test-docker-cmd -- --coverage-html=/coverage"
+	docker compose run library-development sh -c "composer install && composer php-library-test-docker-cmd -- --coverage-html=/coverage"
 	@echo "Coverage report generated at $(LOG_DIR)/coverage"
-
-test-dev: update-repositories prepare-framework
-	@echo "Running tests in development environment..."
-	docker compose run --rm library-development > $(LOG_DIR)/development-tests.log 2>&1
-	@echo "Finished running tests. Check $(LOG_DIR)/development-tests.log for details."
 
 .PHONY: cleanup
 cleanup:
@@ -211,3 +206,29 @@ cleanup:
 		docker rmi $$(docker images --filter "label=com.docker.compose.project=$(basename $(pwd))" -q --filter "dangling=true") >/dev/null 2>&1; \
 		echo "(Cleanup) Dangling images removed."; \
 	fi
+
+dev-test: update-repositories prepare-framework
+	@echo "Running tests in development environment..."
+	docker compose run library-development > $(LOG_DIR)/development-tests.log 2>&1
+	@echo "Finished running tests. Check $(LOG_DIR)/development-tests.log for details."
+
+.PHONY: dev-up
+dev-up: update-repositories
+	@echo "Starting development environment..."
+	docker compose up -d
+
+.PHONY: dev-exec
+dev-exec: update-repositories
+	@if [ -z "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
+		echo "Error: No command provided. Usage: make dev-exec '<command>'"; \
+		exit 1; \
+	fi; \
+	if [ $$(docker compose ps -q library-development | wc -l) -eq 0 ]; then \
+		echo "Container is not running. Starting it..."; \
+		docker compose up -d library-development; \
+	fi; \
+	echo "Executing command in container..."; \
+	docker compose exec library-development /bin/sh -c "$(filter-out $@,$(MAKECMDGOALS))"
+
+%:
+	@:
