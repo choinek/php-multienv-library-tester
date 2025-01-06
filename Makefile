@@ -213,6 +213,7 @@ dev-test: update-repositories prepare-framework
 	@echo "Finished running tests. Check $(LOG_DIR)/development-tests.log for details."
 
 .PHONY: dev-up
+start: dev-up
 dev-up: update-repositories
 	@echo "Starting development environment..."
 	docker compose up -d

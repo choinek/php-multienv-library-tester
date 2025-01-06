@@ -46,8 +46,10 @@ fi
 CONFIG_FILE=".php-library-test-docker.config"
 PLACEHOLDER_DIR="{{PLACEHOLDER_DIR}}"
 PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT="{{PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT}}"
+PLACEHOLDER_PHP_PORT_ACTIVE_DEVELOPMENT="{{PLACEHOLDER_PHP_PORT_ACTIVE_DEVELOPMENT}}"
 DEFAULT_PHP_VERSIONS="8.1,8.2,8.3,8.4"
 DEFAULT_PHP_VERSION_ACTIVE_DEVELOPMENT="8.3"
+PHP_PORT_ACTIVE_DEVELOPMENT=${PHP_PORT_ACTIVE_DEVELOPMENT:-8100}
 FILES_WITH_PLACEHOLDERS=("Dockerfile" "docker-compose.yml" "docker-compose.test.yml" "validate.sh")
 
 # COLORS :)
@@ -464,6 +466,7 @@ replace_placeholders() {
          esuccesshidden "Copied $template_file to $output_file"
          "${SED_INPLACE[@]}" "s|$PLACEHOLDER_DIR|$REPLACEMENT|g" "$output_file"
          "${SED_INPLACE[@]}" "s|$PLACEHOLDER_PHP_VERSION_ACTIVE_DEVELOPMENT|$PHP_VERSION_ACTIVE_DEVELOPMENT|g" "$output_file"
+         "${SED_INPLACE[@]}" "s|$PLACEHOLDER_PHP_PORT_ACTIVE_DEVELOPMENT|$PHP_PORT_ACTIVE_DEVELOPMENT|g" "$output_file"
          esuccess "Replaced placeholders in $output_file"
 
       else

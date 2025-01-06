@@ -12,7 +12,7 @@ services:
       - ./php-library-test-docker-output/coverage:/coverage
     environment:
       XDEBUG_MODE: coverage
-    command: php -S 0.0.0.0:8000 -t /app
+    command: php -S 0.0.0.0:{{PLACEHOLDER_PHP_PORT_ACTIVE_DEVELOPMENT}} -t /app
 
 #command: >
 #sh -c "php --version && composer install && composer php-library-test-docker-cmd"
